@@ -9,6 +9,8 @@ logCounter.id = 'logCounter';
 logCounter.style.fontSize = '1.2em';
 statusText.after(logCounter);
 
+let logsGenerated = 0; // Track the number of logs generated
+
 startButton.addEventListener('click', () => {
     socket.emit('start');
     statusText.innerText = 'Generating Logs...';
@@ -18,11 +20,11 @@ startButton.addEventListener('click', () => {
 stopButton.addEventListener('click', () => {
     socket.emit('stop');
     spinner.style.display = 'none';
-    // Get the current log count when stopping
-    const count = logCounter.innerText.split(': ')[1];
-    statusText.innerText = `Stopped generating logs.`;
+    // Display the final log count when stopping
+    statusText.innerText = `Stopped generating logs. Total Logs Generated: ${logsGenerated}`;
 });
 
-socket.on('log', (count) => {
-    logCounter.innerText = `Logs Generated: ${count}`;
+socket.on('log', () => {
+    logsGenerated += 1; // Increment the log count
+    logCounter.innerText = `Logs Generated: ${logsGenerated}`;
 });
