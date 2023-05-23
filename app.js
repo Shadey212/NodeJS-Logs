@@ -56,6 +56,7 @@ io.on('connection', (socket) => {
     if (!generating) {
       generating = true;
       logCount = 0; // Reset log count when starting
+      io.emit('log', logCount); // Emit initial log count before generating logs
       generateLogs();
     }
   });
@@ -64,6 +65,7 @@ io.on('connection', (socket) => {
     generating = false;
     io.emit('log', logCount); // Emit final log count after stopping log generation
   });
+});
 
 server.listen(process.env.PORT || 3000, () => {
   console.log('Server listening on port 3000');
