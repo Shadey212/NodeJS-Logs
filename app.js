@@ -45,7 +45,9 @@ const generateLogs = async () => {
     }
 
     logCount += 1;
-    io.emit('log', logCount);
+    io.emit('log', logCount); // Emit incremented log count
+
+    await new Promise((resolve) => setTimeout(resolve, 100)); // Delay between generating logs
   }
 };
 
