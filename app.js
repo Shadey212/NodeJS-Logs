@@ -58,9 +58,13 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('stop', () => {
+  socket.on('stop', async () => {
     generating = false;
-    io.emit('log', logCount); // Emit log count when stopping
+    await new Promise((resolve) => {
+      logCount += 1; // Increment log count before emitting
+      io.emit('log', logCount); // Emit log count when stopping
+      resolve();
+    });
   });
 });
 
