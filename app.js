@@ -44,8 +44,7 @@ const generateLogs = async () => {
       await logger.info(log);
     }
 
-    logCount += 1;
-    io.emit('log', logCount); // Emit incremented log count
+    io.emit('log'); // Emit log count event
 
     await new Promise((resolve) => setTimeout(resolve, 100)); // Delay between generating logs
   }
@@ -55,16 +54,15 @@ io.on('connection', (socket) => {
   socket.on('start', () => {
     if (!generating) {
       generating = true;
-      logCount = 0; // Reset log count when starting
-      io.emit('log', logCount); // Emit initial log count before generating logs
+      io.emit('log'); // Emit initial log count event
       generateLogs();
     }
-  });
+  });  
 
   socket.on('stop', () => {
     generating = false;
-    io.emit('log', logCount); // Emit final log count after stopping log generation
-  });
+    io.emit('log'); // Emit final log count event
+  });  
 });
 
 server.listen(process.env.PORT || 3000, () => {

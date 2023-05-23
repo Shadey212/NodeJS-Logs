@@ -20,7 +20,7 @@ stopButton.addEventListener('click', () => {
     spinner.style.display = 'none';
     // Get the current log count when stopping
     const count = logCounter.innerText.split(': ')[1];
-    statusText.innerText = `Stopped generating logs. Total logs generated: ${count}`;
+    statusText.innerText = `Stopped generating logs.`;
 });
 
 socket.on('log', (count) => {
