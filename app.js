@@ -11,12 +11,13 @@ const io = new Server(server);
 // Serve static files from the "public" directory
 app.use(express.static('public'));
 
-const httpMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD'];
 let generating = false;
 let logCount = 0;
 
 const generateLogs = async () => {
   const logger = createLogger();
+  const httpMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
+
   while (generating) {
     const method = faker.random.arrayElement(httpMethods);
     const url = faker.internet.url();
@@ -35,13 +36,13 @@ const generateLogs = async () => {
     }
 
     // Send log to Logtail with the appropriate level
-        if (status >= 500) {
-            await logtail.error(log);
-        } else if (status >= 400) {
-            await logtail.warn(log);
-        } else {
-            await logtail.info(log);
-        }
+    if (status >= 500) {
+      await logger.error(log);
+    } else if (status >= 400) {
+      await logger.warn(log);
+    } else {
+      await logger.info(log);
+    }
 
     logCount += 1;
     io.emit('log', logCount);
@@ -52,16 +53,17 @@ io.on('connection', (socket) => {
   socket.on('start', () => {
     if (!generating) {
       generating = true;
+      logCount = 0; // Reset log count when starting
       generateLogs();
     }
   });
 
   socket.on('stop', () => {
     generating = false;
+    io.emit('log', logCount); // Emit log count when stopping
   });
 });
 
-const port = process.env.PORT || 3000;
-server.listen(port, () => {
-  console.log(`Server listening on port ${port}`);
+server.listen(process.env.PORT || 3000, () => {
+  console.log('Server listening on port 3000');
 });
