@@ -1,0 +1,28 @@
+{
+  "name": "nodejs-logs",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@logtail/node": "^0.4.0",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "faker": "^5.5.3",
+    "morgan": "^1.10.0",
+    "socket.io": "^4.6.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Shadey212/NodeJS-Logs.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Shadey212/NodeJS-Logs/issues"
+  },
+  "homepage": "https://github.com/Shadey212/NodeJS-Logs#readme",
+  "description": ""
+}
