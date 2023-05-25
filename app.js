@@ -8,13 +8,11 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Serve static files from the "public" directory
 app.use(express.static('public'));
 
 let generating = false;
-let logCount = 0;
 
-const generateLogs = () => {
+const generateLogs = async () => {
   const logger = createLogger();
   const httpMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 
@@ -22,18 +20,19 @@ const generateLogs = () => {
     const method = faker.random.arrayElement(httpMethods);
     const url = faker.internet.url();
     const status = faker.random.arrayElement([200, 201, 400, 404, 500]);
-    const ip = faker.internet.ip(); // Fake IP
-    const city = faker.address.city(); // Fake city
-    const latitude = faker.address.latitude(); // Fake latitude
-    const longitude = faker.address.longitude(); // Fake longitude
-    const userAgent = faker.internet.userAgent(); // Fake user agent
+    const ip = faker.internet.ip();
+    const city = faker.address.city();
+    const latitude = faker.address.latitude();
+    const longitude = faker.address.longitude();
+    const userAgent = faker.internet.userAgent();
+
     const log = {
       method,
       url,
       status,
       ip,
-      city,
       geolocation: {
+        city,
         latitude,
         longitude
       },
@@ -44,26 +43,32 @@ const generateLogs = () => {
 
     if (status >= 400) {
       log.error = faker.random.words();
-      log.stack = `Error at ${faker.random.arrayElement(['functionA', 'functionB', 'functionC'])} in ${faker.system.fileName()} line ${faker.datatype.number({ min: 1, max: 100 })}`; // More detailed fake stack trace
+      log.stack = `Error at ${faker.random.arrayElement(['functionA', 'functionB', 'functionC'])} in ${faker.system.fileName()} line ${faker.datatype.number({ min: 1, max: 100 })}`;
     }
 
-    // Send log to Logtail with the appropriate level
     if (status >= 500) {
-      logger.critical(log); // Custom log level: critical
+      logger.fatal(log);
     } else if (status >= 400) {
       logger.error(log);
     } else if (status >= 300) {
       logger.warn(log);
+    } else if (status >= 200) {
+      logger.http(log); // Using .http method for http status codes
     } else {
       logger.info(log);
     }
 
-    if (status < 300) { // Debug level logging
+    if (status < 300) {
       log.debugMessage = faker.lorem.sentence();
       logger.debug(log);
     }
 
-    io.emit('log'); // Emit log count event
+    // Let's add more log levels
+    logger.verbose({ message: faker.lorem.sentence() });
+    logger.silly({ message: faker.lorem.sentence() });
+    logger.trace({ message: faker.lorem.sentence() });
+
+    io.emit('log');
   }
 };
 
@@ -71,15 +76,15 @@ io.on('connection', (socket) => {
   socket.on('start', () => {
     if (!generating) {
       generating = true;
-      io.emit('log'); // Emit initial log count event
+      io.emit('log');
       generateLogs();
     }
-  });  
+  });
 
   socket.on('stop', () => {
     generating = false;
-    io.emit('log'); // Emit final log count event
-  });  
+    io.emit('log');
+  });
 });
 
 server.listen(process.env.PORT || 3000, () => {
