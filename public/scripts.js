@@ -21,7 +21,7 @@ stopButton.addEventListener('click', () => {
     socket.emit('stop');
     spinner.style.display = 'none';
     // Display the final log count when stopping
-    statusText.innerText = `Stopped generating logs. Total Logs Generated: ${logsGenerated}`;
+    statusText.innerText = `Stopped generating logs.`;
 });
 
 socket.on('log', () => {
