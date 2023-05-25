@@ -24,7 +24,7 @@ const generateLogs = async () => {
       const url = faker.internet.url();
       const status = faker.random.arrayElement([200, 201, 400, 404, 500]);
       const ip = faker.internet.ip();
-      const country = faker.address.country();
+      const countryCode = faker.address.countryCode();
       const latitude = faker.address.latitude();
       const longitude = faker.address.longitude();
       const userAgent = faker.internet.userAgent();
@@ -35,7 +35,7 @@ const generateLogs = async () => {
         status,
         ip,
         geolocation: {
-          country,
+          countryCode,
           latitude,
           longitude
         },
