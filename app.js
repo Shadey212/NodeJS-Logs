@@ -44,7 +44,7 @@ const generateLogs = () => {
 
     if (status >= 400) {
       log.error = faker.random.words();
-      log.stack = `Error at ${faker.random.arrayElement(['functionA', 'functionB', 'functionC'])} in ${faker.system.fileName()} line ${faker.random.number(100)}`; // More detailed fake stack trace
+      log.stack = `Error at ${faker.random.arrayElement(['functionA', 'functionB', 'functionC'])} in ${faker.system.fileName()} line ${faker.datatype.number({ min: 1, max: 100 })}`; // More detailed fake stack trace
     }
 
     // Send log to Logtail with the appropriate level
