@@ -14,7 +14,7 @@ app.use(express.static('public'));
 let generating = false;
 let logCount = 0;
 
-const generateLogs = async () => {
+const generateLogs = () => {
   const logger = createLogger();
   const httpMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 
@@ -41,7 +41,7 @@ const generateLogs = async () => {
       error: null,
       stack: null
     };
-    
+
     if (status >= 400) {
       log.error = faker.random.words();
       log.stack = `Error at ${faker.random.arrayElement(['functionA', 'functionB', 'functionC'])} in ${faker.system.fileName()} line ${faker.random.number(100)}`; // More detailed fake stack trace
@@ -49,23 +49,21 @@ const generateLogs = async () => {
 
     // Send log to Logtail with the appropriate level
     if (status >= 500) {
-      await logger.critical(log); // Custom log level: critical
+      logger.critical(log); // Custom log level: critical
     } else if (status >= 400) {
-      await logger.error(log);
+      logger.error(log);
     } else if (status >= 300) {
-      await logger.warn(log);
+      logger.warn(log);
     } else {
-      await logger.info(log);
+      logger.info(log);
     }
 
     if (status < 300) { // Debug level logging
       log.debugMessage = faker.lorem.sentence();
-      await logger.debug(log);
+      logger.debug(log);
     }
 
     io.emit('log'); // Emit log count event
-
-    await new Promise((resolve) => setTimeout(resolve, 100)); // Delay between generating logs
   }
 };
 
