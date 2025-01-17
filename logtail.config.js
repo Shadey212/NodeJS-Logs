@@ -12,7 +12,7 @@ const { LogtailTransport } = require('@logtail/winston');
  */
 function createLoggerInstance() {
   // 1) Instantiate a Logtail client with your source token
-  const logtail = new Logtail("YOUR_SOURCE_TOKEN");
+  const logtail = new Logtail(process.env.LOGTAIL_SOURCE_TOKEN);
 
   // 2) Define a Winston logger with the Logtail transport only
   const logger = createLogger({
