@@ -1,4 +1,3 @@
-// scenarioGenerator.js
 const faker = require('faker');
 const { createLogger } = require('./logtail.config');
 
@@ -54,7 +53,6 @@ function pickUserAgent() {
 }
 
 // Create a pool of 10 users, each with a random-length numeric ID
-// We'll also add an 'os' (operating system), and a 'deviceType' field
 const USERS = Array.from({ length: 10 }).map(() => ({
   userId: generateNumericUserId(),
   username: faker.internet.userName(),
@@ -69,7 +67,7 @@ const USERS = Array.from({ length: 10 }).map(() => ({
 const PRODUCTS = Array.from({ length: 6 }).map(() => ({
   productId: faker.datatype.uuid(),
   name: faker.commerce.productName(),
-  category: faker.commerce.department(), // e.g. "Electronics", "Tools", etc.
+  category: faker.commerce.department(),
   price: faker.commerce.price(),
 }));
 
@@ -106,16 +104,23 @@ function randomGeo() {
   };
 }
 
-// We’ll define random shipping providers, payment methods, etc.
 const SHIPPING_PROVIDERS = ['UPS', 'FedEx', 'DHL', 'USPS', 'Royal Mail', 'Amazon Logistics'];
 const PAYMENT_METHODS = ['Credit Card', 'PayPal', 'Apple Pay', 'Google Pay', 'Bank Transfer'];
+
+// For random "extra" log levels
+const ADDITIONAL_LOG_LEVELS = ['warn', 'debug', 'verbose', 'silly'];
+// 5% chance to produce an extra log entry with one of those levels
+const EXTRA_LOG_CHANCE = 0.05;
 
 class ScenarioGenerator {
   constructor(io) {
     this.logger = createLogger();
     this.io = io;
     this.generating = false;
-    this.delayMs = 10; 
+
+    // If you want to generate logs faster, reduce delay or
+    // produce multiple events per loop
+    this.delayMs = 200;
   }
 
   start() {
@@ -135,12 +140,16 @@ class ScenarioGenerator {
         const eventType = pickEvent();
         const user = faker.random.arrayElement(USERS);
         await this.generateEvent(eventType, user);
+
+        // Possibly generate an "extra" log with a random lesser-used level
+        this.maybeGenerateAdditionalLog();
       } catch (err) {
         this.logger.error(`\u001B[31m[GENERATOR_ERROR]\u001B[0m ${err.message}`, {
           stack: err.stack
         });
         this.generating = false;
       }
+
       await new Promise((r) => setTimeout(r, this.delayMs));
     }
   }
@@ -166,12 +175,14 @@ class ScenarioGenerator {
         this.generateShippingLog(user);
         break;
     }
-    // Notify the frontend
     this.io.emit('log');
   }
 
+  // -----------
+  // MAIN EVENTS
+  // -----------
+
   generateLoginLog(user) {
-    // New sessionId on each login
     user.sessionId = faker.datatype.uuid();
 
     const message = `User \u001B[1;32m${user.userId}\u001B[0m logged in (device: ${user.deviceType}).`;
@@ -186,12 +197,12 @@ class ScenarioGenerator {
       deviceType: user.deviceType,
       operatingSystem: user.operatingSystem,
       ip: randomIP(),
-      userAgent: pickUserAgent(), // <--- Use our stable UA function here
+      userAgent: pickUserAgent(),
       geolocation: {
         countryCode: randomCountryCode(),
         ...randomGeo(),
       },
-      loginPath: '/api/login', // an example API endpoint path
+      loginPath: '/api/login',
     };
 
     this.logger.info(log);
@@ -201,9 +212,7 @@ class ScenarioGenerator {
     if (!user.sessionId) return;
 
     const product = faker.random.arrayElement(PRODUCTS);
-    const message =
-      `User \u001B[1;32m${user.userId}\u001B[0m browsed ` +
-      `\u001B[33m${product.name}\u001B[0m in category [${product.category}].`;
+    const message = `User \u001B[1;32m${user.userId}\u001B[0m browsed \u001B[33m${product.name}\u001B[0m in category [${product.category}].`;
 
     const log = {
       event: 'USER_BROWSE',
@@ -214,12 +223,12 @@ class ScenarioGenerator {
       productName: product.name,
       productCategory: product.category,
       ip: randomIP(),
-      userAgent: pickUserAgent(), // <--- stable UA
+      userAgent: pickUserAgent(),
       geolocation: {
         countryCode: randomCountryCode(),
         ...randomGeo(),
       },
-      browsePath: '/api/products', // hypothetical endpoint
+      browsePath: '/api/products',
       deviceType: user.deviceType,
       operatingSystem: user.operatingSystem
     };
@@ -231,15 +240,12 @@ class ScenarioGenerator {
     if (!user.sessionId) return;
 
     const product = faker.random.arrayElement(PRODUCTS);
-    // Add random quantity for more detail
     const quantity = faker.datatype.number({ min: 1, max: 5 });
     for (let i = 0; i < quantity; i++) {
       user.cart.push(product);
     }
 
-    const message =
-      `User \u001B[1;32m${user.userId}\u001B[0m added ` +
-      `\u001B[1m${product.name}\u001B[0m (x${quantity}) to cart.`;
+    const message = `User \u001B[1;32m${user.userId}\u001B[0m added \u001B[1m${product.name}\u001B[0m (x${quantity}) to cart.`;
 
     const log = {
       event: 'ADD_TO_CART',
@@ -255,7 +261,7 @@ class ScenarioGenerator {
       addToCartPath: '/api/cart/add',
       deviceType: user.deviceType,
       operatingSystem: user.operatingSystem,
-      userAgent: pickUserAgent(), // <--- stable UA
+      userAgent: pickUserAgent(),
     };
 
     this.logger.info(log);
@@ -280,7 +286,7 @@ class ScenarioGenerator {
       checkoutPath: '/api/checkout',
       deviceType: user.deviceType,
       operatingSystem: user.operatingSystem,
-      userAgent: pickUserAgent(), // <--- stable UA
+      userAgent: pickUserAgent(),
     };
 
     this.logger.info(log);
@@ -293,11 +299,8 @@ class ScenarioGenerator {
     const totalAmount = user.cart
       .reduce((acc, p) => acc + parseFloat(p.price), 0)
       .toFixed(2);
-    
-    // Choose a random payment method for more detail
-    const paymentMethod = faker.random.arrayElement(PAYMENT_METHODS);
 
-    // Example of a "payment link" you'd send the user
+    const paymentMethod = faker.random.arrayElement(PAYMENT_METHODS);
     const paymentLink = `https://example.com/pay?session=${user.sessionId}`;
 
     if (isFailure) {
@@ -316,7 +319,7 @@ class ScenarioGenerator {
         paymentPath: '/api/payment',
         deviceType: user.deviceType,
         operatingSystem: user.operatingSystem,
-        userAgent: pickUserAgent(), // <--- stable UA
+        userAgent: pickUserAgent(),
       };
       this.logger.error(log);
     } else {
@@ -334,7 +337,7 @@ class ScenarioGenerator {
         paymentPath: '/api/payment',
         deviceType: user.deviceType,
         operatingSystem: user.operatingSystem,
-        userAgent: pickUserAgent(), // <--- stable UA
+        userAgent: pickUserAgent(),
       };
       this.logger.info(log);
 
@@ -346,10 +349,8 @@ class ScenarioGenerator {
   generateShippingLog(user) {
     if (!user.sessionId) return;
 
-    // If payment succeeded, presumably the cart is empty. We'll log shipping details anyway:
     const shippingProvider = faker.random.arrayElement(SHIPPING_PROVIDERS);
-    const deliveryEstimate = faker.date.soon(7).toISOString().split('T')[0]; 
-    // e.g. "2025-02-02"
+    const deliveryEstimate = faker.date.soon(7).toISOString().split('T')[0];
 
     const message = `Order shipped for user \u001B[1;32m${user.userId}\u001B[0m via ${shippingProvider}.`;
     const log = {
@@ -368,9 +369,44 @@ class ScenarioGenerator {
       },
       deviceType: user.deviceType,
       operatingSystem: user.operatingSystem,
-      userAgent: pickUserAgent(), // <--- stable UA
+      userAgent: pickUserAgent(),
     };
     this.logger.info(log);
+  }
+
+  // ----------------------------------
+  // Additional minor log levels
+  // ----------------------------------
+
+  maybeGenerateAdditionalLog() {
+    // 5% chance to log something at debug/warn/verbose/silly
+    if (Math.random() < EXTRA_LOG_CHANCE) {
+      const chosenLevel = faker.random.arrayElement(ADDITIONAL_LOG_LEVELS);
+
+      // Just an example message
+      const randomMsg = faker.lorem.sentence();
+      // Maybe attach some random fields
+      const extraFields = {
+        event: `RANDOM_${chosenLevel.toUpperCase()}`,
+        userAgent: pickUserAgent(),
+        debugKey: faker.random.alphaNumeric(8),
+      };
+
+      switch (chosenLevel) {
+        case 'warn':
+          this.logger.warn(randomMsg, extraFields);
+          break;
+        case 'debug':
+          this.logger.debug(randomMsg, extraFields);
+          break;
+        case 'verbose':
+          this.logger.verbose(randomMsg, extraFields);
+          break;
+        case 'silly':
+          this.logger.silly(randomMsg, extraFields);
+          break;
+      }
+    }
   }
 }
 
