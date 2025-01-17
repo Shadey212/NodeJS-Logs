@@ -2,18 +2,36 @@
 const faker = require('faker');
 const { createLogger } = require('./logtail.config');
 
-// A small set of test users/products
-const USERS = Array.from({ length: 5 }).map((_, i) => ({
-  userId: `user_${i + 1}`,
+/**
+ * Returns a numeric ID with length between 1 and 6 digits.
+ * E.g. "3", "42", "999999"
+ */
+function generateNumericUserId() {
+  const length = faker.datatype.number({ min: 1, max: 6 });
+  let id = '';
+  for (let i = 0; i < length; i++) {
+    id += faker.datatype.number({ min: 0, max: 9 }).toString();
+  }
+  return id;
+}
+
+// Create a pool of 10 users, each with a random-length numeric ID
+// We'll also add an 'os' (operating system), and a 'deviceType' field
+const USERS = Array.from({ length: 10 }).map(() => ({
+  userId: generateNumericUserId(),
   username: faker.internet.userName(),
   email: faker.internet.email(),
   sessionId: null,
   cart: [],
+  deviceType: faker.random.arrayElement(['desktop', 'mobile', 'tablet']),
+  operatingSystem: faker.random.arrayElement(['Windows 10', 'macOS', 'iOS', 'Android', 'Linux']),
 }));
 
+// We’ll keep 6 products, but add a random category to each for more detail
 const PRODUCTS = Array.from({ length: 6 }).map(() => ({
   productId: faker.datatype.uuid(),
   name: faker.commerce.productName(),
+  category: faker.commerce.department(), // e.g. "Electronics", "Tools", etc.
   price: faker.commerce.price(),
 }));
 
@@ -53,12 +71,16 @@ function randomGeo() {
   };
 }
 
+// We’ll define random shipping providers, payment methods, etc.
+const SHIPPING_PROVIDERS = ['UPS', 'FedEx', 'DHL', 'USPS', 'Royal Mail', 'Amazon Logistics'];
+const PAYMENT_METHODS = ['Credit Card', 'PayPal', 'Apple Pay', 'Google Pay', 'Bank Transfer'];
+
 class ScenarioGenerator {
   constructor(io) {
     this.logger = createLogger();
     this.io = io;
     this.generating = false;
-    this.delayMs = 200;
+    this.delayMs = 200; // 200ms between logs
   }
 
   start() {
@@ -79,11 +101,11 @@ class ScenarioGenerator {
         const user = faker.random.arrayElement(USERS);
         await this.generateEvent(eventType, user);
       } catch (err) {
-        // Red / bold error message
-        this.logger.error(`\u001B[31m[GENERATOR_ERROR]\u001B[0m ${err.message || err}`, { stack: err.stack });
+        this.logger.error(`\u001B[31m[GENERATOR_ERROR]\u001B[0m ${err.message}`, {
+          stack: err.stack
+        });
         this.generating = false;
       }
-      // small delay
       await new Promise((r) => setTimeout(r, this.delayMs));
     }
   }
@@ -108,31 +130,33 @@ class ScenarioGenerator {
       case 'SHIPPING':
         this.generateShippingLog(user);
         break;
-      default:
-        break;
     }
-    // tell the frontend
+    // Notify the frontend
     this.io.emit('log');
   }
 
   generateLoginLog(user) {
-    // Reassign a new sessionId each time
+    // New sessionId on each login
     user.sessionId = faker.datatype.uuid();
 
-    // Green/bold for userId
-    const message = `User \u001B[1;32m${user.userId}\u001B[0m logged in.`;
+    const message = `User \u001B[1;32m${user.userId}\u001B[0m logged in (device: ${user.deviceType}).`;
 
     const log = {
       event: 'USER_LOGIN',
       message,
       userId: user.userId,
       sessionId: user.sessionId,
+      username: user.username,
+      email: user.email,
+      deviceType: user.deviceType,
+      operatingSystem: user.operatingSystem,
       ip: randomIP(),
       userAgent: randomUserAgent(),
       geolocation: {
         countryCode: randomCountryCode(),
         ...randomGeo(),
       },
+      loginPath: '/api/login', // an example API endpoint path
     };
 
     this.logger.info(log);
@@ -142,8 +166,9 @@ class ScenarioGenerator {
     if (!user.sessionId) return;
 
     const product = faker.random.arrayElement(PRODUCTS);
-    const message = `User \u001B[1;32m${user.userId}\u001B[0m browsed ` +
-                    `\u001B[33m${product.name}\u001B[0m.`;
+    const message =
+      `User \u001B[1;32m${user.userId}\u001B[0m browsed ` +
+      `\u001B[33m${product.name}\u001B[0m in category [${product.category}].`;
 
     const log = {
       event: 'USER_BROWSE',
@@ -151,12 +176,17 @@ class ScenarioGenerator {
       userId: user.userId,
       sessionId: user.sessionId,
       productId: product.productId,
+      productName: product.name,
+      productCategory: product.category,
       ip: randomIP(),
       userAgent: randomUserAgent(),
       geolocation: {
         countryCode: randomCountryCode(),
         ...randomGeo(),
       },
+      browsePath: '/api/products', // hypothetical endpoint
+      deviceType: user.deviceType,
+      operatingSystem: user.operatingSystem
     };
 
     this.logger.info(log);
@@ -166,11 +196,15 @@ class ScenarioGenerator {
     if (!user.sessionId) return;
 
     const product = faker.random.arrayElement(PRODUCTS);
-    user.cart.push(product);
+    // Add random quantity for more detail
+    const quantity = faker.datatype.number({ min: 1, max: 5 });
+    for (let i = 0; i < quantity; i++) {
+      user.cart.push(product);
+    }
 
-    // Bold/green for userId, bold for product name
-    const message = `User \u001B[1;32m${user.userId}\u001B[0m added ` +
-                    `\u001B[1m${product.name}\u001B[0m to cart.`;
+    const message =
+      `User \u001B[1;32m${user.userId}\u001B[0m added ` +
+      `\u001B[1m${product.name}\u001B[0m (x${quantity}) to cart.`;
 
     const log = {
       event: 'ADD_TO_CART',
@@ -178,7 +212,14 @@ class ScenarioGenerator {
       userId: user.userId,
       sessionId: user.sessionId,
       productId: product.productId,
+      productName: product.name,
+      productCategory: product.category,
+      quantity,
       cartSize: user.cart.length,
+      cartContents: user.cart.map((p) => p.productId),
+      addToCartPath: '/api/cart/add',
+      deviceType: user.deviceType,
+      operatingSystem: user.operatingSystem
     };
 
     this.logger.info(log);
@@ -187,13 +228,22 @@ class ScenarioGenerator {
   generateCheckoutLog(user) {
     if (!user.sessionId || user.cart.length === 0) return;
 
-    const message = `User \u001B[1;32m${user.userId}\u001B[0m is checking out.`;
+    const message = `User \u001B[1;32m${user.userId}\u001B[0m is checking out with ${user.cart.length} items.`;
+
     const log = {
       event: 'CHECKOUT',
       message,
       userId: user.userId,
       sessionId: user.sessionId,
-      cartContents: user.cart.map((p) => p.productId),
+      cartContents: user.cart.map((p) => ({
+        productId: p.productId,
+        name: p.name,
+        category: p.category,
+        price: p.price
+      })),
+      checkoutPath: '/api/checkout',
+      deviceType: user.deviceType,
+      operatingSystem: user.operatingSystem
     };
 
     this.logger.info(log);
@@ -206,10 +256,15 @@ class ScenarioGenerator {
     const totalAmount = user.cart
       .reduce((acc, p) => acc + parseFloat(p.price), 0)
       .toFixed(2);
+    
+    // Choose a random payment method for more detail
+    const paymentMethod = faker.random.arrayElement(PAYMENT_METHODS);
+
+    // Example of a "payment link" you'd send the user
+    const paymentLink = `https://example.com/pay?session=${user.sessionId}`;
 
     if (isFailure) {
-      // red for failure
-      const message = `\u001B[31mPayment failed!\u001B[0m (User: ${user.userId})`;
+      const message = `\u001B[31mPayment failed!\u001B[0m (User: ${user.userId}, method: ${paymentMethod})`;
 
       const log = {
         event: 'PAYMENT',
@@ -219,11 +274,15 @@ class ScenarioGenerator {
         totalAmount,
         success: false,
         error: 'Payment gateway error (simulated).',
+        paymentMethod,
+        paymentLink,
+        paymentPath: '/api/payment',
+        deviceType: user.deviceType,
+        operatingSystem: user.operatingSystem
       };
       this.logger.error(log);
     } else {
-      // bold green for success
-      const message = `Payment of \u001B[1;32m$${totalAmount}\u001B[0m successful for user ${user.userId}.`;
+      const message = `Payment of \u001B[1;32m$${totalAmount}\u001B[0m successful for user ${user.userId} via ${paymentMethod}.`;
 
       const log = {
         event: 'PAYMENT',
@@ -232,30 +291,44 @@ class ScenarioGenerator {
         sessionId: user.sessionId,
         totalAmount,
         success: true,
+        paymentMethod,
+        paymentLink,
+        paymentPath: '/api/payment',
+        deviceType: user.deviceType,
+        operatingSystem: user.operatingSystem
       };
       this.logger.info(log);
 
-      // empty the cart
+      // Clear the cart
       user.cart = [];
     }
   }
 
   generateShippingLog(user) {
-    // Only relevant if user has paid, so cart should be empty
     if (!user.sessionId) return;
 
-    const message = `Order shipped for user \u001B[1;32m${user.userId}\u001B[0m.`;
+    // If payment succeeded, presumably the cart is empty. We'll log shipping details anyway:
+    const shippingProvider = faker.random.arrayElement(SHIPPING_PROVIDERS);
+    const deliveryEstimate = faker.date.soon(7).toISOString().split('T')[0]; 
+    // e.g. "2025-02-02"
+
+    const message = `Order shipped for user \u001B[1;32m${user.userId}\u001B[0m via ${shippingProvider}.`;
     const log = {
       event: 'SHIPPING',
       message,
       userId: user.userId,
       sessionId: user.sessionId,
       trackingCode: faker.datatype.uuid(),
+      shippingProvider,
+      deliveryEstimate,
       shippingAddress: faker.address.streetAddress(),
+      shippingPath: '/api/shipping',
       geolocation: {
         countryCode: randomCountryCode(),
         ...randomGeo(),
       },
+      deviceType: user.deviceType,
+      operatingSystem: user.operatingSystem
     };
     this.logger.info(log);
   }
