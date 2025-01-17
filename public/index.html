@@ -1,22 +1,27 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <title>Log Generator</title>
-    <link rel="stylesheet" type="text/css" href="/styles.css">
-</head>
-<body>
-    <div class="container">
-        <h1>Log Generator</h1>
-        <div class="controls">
-            <button id="start" class="btn">Start Generating Logs</button>
-            <button id="stop" class="btn">Stop Generating Logs</button>
-        </div>
-        <div id="spinner" class="spinner">
-            <div class="loader"></div>
-        </div>
-        <p id="status" class="status">Not Generating Logs...</p>
-    </div>
+  <head>
+    <title>Better Stack Log Generator</title>
     <script src="/socket.io/socket.io.js"></script>
-    <script src="/scripts.js"></script>
-</body>
+  </head>
+  <body>
+    <h1>Log Generator (Better Stack / Logtail)</h1>
+    <button id="startBtn">Start Logs</button>
+    <button id="stopBtn">Stop Logs</button>
+    
+    <script>
+      const socket = io();
+      document.getElementById('startBtn').addEventListener('click', () => {
+        socket.emit('start');
+      });
+      document.getElementById('stopBtn').addEventListener('click', () => {
+        socket.emit('stop');
+      });
+
+      // Just to confirm we’re getting logs
+      socket.on('log', () => {
+        console.log("Received 'log' event from server");
+      });
+    </script>
+  </body>
 </html>

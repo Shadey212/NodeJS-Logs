@@ -1,23 +1,36 @@
-require('dotenv').config();
-const { Logtail } = require("@logtail/node");
+// logtail.config.js
+const { createLogger, format } = require('winston');
+const { Logtail } = require('@logtail/node');
+const { LogtailTransport } = require('@logtail/winston');
 
-const logtail = new Logtail(process.env.LOGTAIL_SOURCE_TOKEN);
+/**
+ * Create a Winston logger that sends logs directly to Logtail.
+ * 
+ * - Captures all levels (down to 'silly').
+ * - Includes timestamp, stack traces (for Errors), and metadata in JSON format.
+ * - Embeds ANSI codes in the message itself (for coloring) if you add them in your log calls.
+ */
+function createLoggerInstance() {
+  // 1) Instantiate a Logtail client with your source token
+  const logtail = new Logtail("YOUR_SOURCE_TOKEN");
 
-function createLogger() {
-  return {
-    error: (message) => logtail.error(message),
-    warn: (message) => logtail.warn(message),
-    info: (message) => logtail.info(message),
-    debug: (message) => logtail.debug(message),
-    fatal: (message) => logtail.error({...message, level: 'fatal'}), // use .error method, but add 'level' field to indicate fatal error
-    // Similarly, you can add other log levels using the existing methods and the 'level' field
-    http: (message) => logtail.info({...message, level: 'http'}), // use .info method for http level
-    verbose: (message) => logtail.debug({...message, level: 'verbose'}), // use .debug method for verbose level
-    silly: (message) => logtail.debug({...message, level: 'silly'}), // use .debug method for silly level
-    trace: (message) => logtail.debug({...message, level: 'trace'}), // use .debug method for trace level
-  };
+  // 2) Define a Winston logger with the Logtail transport only
+  const logger = createLogger({
+    level: 'silly', // capture all levels: error, warn, info, http, verbose, debug, silly
+    format: format.combine(
+      format.timestamp(),
+      format.errors({ stack: true }),
+      format.metadata({
+        fillExcept: ['message', 'level', 'timestamp', 'label', 'stack']
+      }),
+      format.json()
+    ),
+    transports: [
+      new LogtailTransport(logtail)
+    ],
+  });
+
+  return logger;
 }
 
-module.exports = {
-  createLogger,
-};
+module.exports = { createLogger: createLoggerInstance };
