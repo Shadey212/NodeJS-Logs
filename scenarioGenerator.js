@@ -1,3 +1,4 @@
+// scenarioGenerator.js
 const faker = require('faker');
 const { createLogger } = require('./logtail.config');
 
@@ -117,10 +118,6 @@ class ScenarioGenerator {
     this.logger = createLogger();
     this.io = io;
     this.generating = false;
-
-    // If you want to generate logs faster, reduce delay or
-    // produce multiple events per loop
-    this.delayMs = 10;
   }
 
   start() {
@@ -137,11 +134,12 @@ class ScenarioGenerator {
   async generateLoop() {
     while (this.generating) {
       try {
+        // Main scenario event
         const eventType = pickEvent();
         const user = faker.random.arrayElement(USERS);
         await this.generateEvent(eventType, user);
 
-        // Possibly generate an "extra" log with a random lesser-used level
+        // Possibly generate an "extra" log with debug/warn/verbose, etc.
         this.maybeGenerateAdditionalLog();
       } catch (err) {
         this.logger.error(`\u001B[31m[GENERATOR_ERROR]\u001B[0m ${err.message}`, {
@@ -150,7 +148,9 @@ class ScenarioGenerator {
         this.generating = false;
       }
 
-      await new Promise((r) => setTimeout(r, this.delayMs));
+      // Random delay between 10 and 65 ms
+      const randomDelay = faker.datatype.number({ min: 10, max: 35 });
+      await new Promise((r) => setTimeout(r, randomDelay));
     }
   }
 
@@ -178,9 +178,9 @@ class ScenarioGenerator {
     this.io.emit('log');
   }
 
-  // -----------
-  // MAIN EVENTS
-  // -----------
+  // --------
+  // SCENARIO EVENTS
+  // --------
 
   generateLoginLog(user) {
     user.sessionId = faker.datatype.uuid();
@@ -313,6 +313,7 @@ class ScenarioGenerator {
         sessionId: user.sessionId,
         totalAmount,
         success: false,
+        paymentStatus: 'failed',
         error: 'Payment gateway error (simulated).',
         paymentMethod,
         paymentLink,
@@ -332,6 +333,7 @@ class ScenarioGenerator {
         sessionId: user.sessionId,
         totalAmount,
         success: true,
+        paymentStatus: 'successful',
         paymentMethod,
         paymentLink,
         paymentPath: '/api/payment',
@@ -377,15 +379,11 @@ class ScenarioGenerator {
   // ----------------------------------
   // Additional minor log levels
   // ----------------------------------
-
   maybeGenerateAdditionalLog() {
     // 5% chance to log something at debug/warn/verbose/silly
     if (Math.random() < EXTRA_LOG_CHANCE) {
       const chosenLevel = faker.random.arrayElement(ADDITIONAL_LOG_LEVELS);
-
-      // Just an example message
       const randomMsg = faker.lorem.sentence();
-      // Maybe attach some random fields
       const extraFields = {
         event: `RANDOM_${chosenLevel.toUpperCase()}`,
         userAgent: pickUserAgent(),
