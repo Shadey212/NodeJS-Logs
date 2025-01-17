@@ -13,7 +13,11 @@ const io = new Server(server);
 app.use(express.static('public'));
 
 // Create our scenario generator
+const ScenarioGenerator = require('./scenarioGenerator');
 const scenarioGenerator = new ScenarioGenerator(io);
+
+// Start generating logs immediately
+scenarioGenerator.start();
 
 io.on('connection', (socket) => {
   socket.on('start', () => {
