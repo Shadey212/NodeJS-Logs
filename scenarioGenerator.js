@@ -120,7 +120,7 @@ class ScenarioGenerator {
 
     // If you want to generate logs faster, reduce delay or
     // produce multiple events per loop
-    this.delayMs = 200;
+    this.delayMs = 10;
   }
 
   start() {
