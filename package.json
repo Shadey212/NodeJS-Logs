@@ -1,13 +1,25 @@
 {
   "name": "nodejs-logs",
   "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "description": "NodeJS app for scenario-based logging and sending logs to Logtail",
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Shadey212/NodeJS-Logs.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Shadey212/NodeJS-Logs/issues"
+  },
+  "homepage": "https://github.com/Shadey212/NodeJS-Logs#readme",
+  "scripts": {
+    "start": "node app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "engines": {
+    "node": "18.x"
+  },
   "dependencies": {
     "@logtail/node": "^0.4.21",
     "@logtail/winston": "^0.5.2",
@@ -17,14 +29,5 @@
     "morgan": "^1.10.0",
     "socket.io": "^4.8.1",
     "winston": "^3.17.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Shadey212/NodeJS-Logs.git"
-  },
-  "bugs": {
-    "url": "https://github.com/Shadey212/NodeJS-Logs/issues"
-  },
-  "homepage": "https://github.com/Shadey212/NodeJS-Logs#readme",
-  "description": ""
+  }
 }
