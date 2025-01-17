@@ -15,6 +15,44 @@ function generateNumericUserId() {
   return id;
 }
 
+/**
+ * Bot user agents
+ */
+const BOT_USER_AGENTS = [
+  "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+  "Mozilla/5.0 (compatible; Facebookbot/1.0; +http://www.facebook.com/externalhit_uatext.php)",
+  "Mozilla/5.0 (compatible; YandexBot/3.0; +http://yandex.com/bots)"
+];
+
+/**
+ * Real/most-used user agents (10 examples)
+ */
+const REAL_USER_AGENTS = [
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.5615.137 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; rv:112.0) Gecko/20100101 Firefox/112.0",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Safari/605.1.15",
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 16_4_1 like Mac OS X) AppleWebKit/604.5.6 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
+  "Mozilla/5.0 (Linux; Android 13; Pixel 6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.5481.153 Mobile Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:100.0) Gecko/20100101 Firefox/100.0",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_3_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0",
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36",
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15"
+];
+
+/**
+ * Picks a user-agent with 5% chance of a bot and 95% a real browser UA
+ */
+function pickUserAgent() {
+  const botChance = 0.05; // 5% chance
+  const roll = Math.random();
+  if (roll < botChance) {
+    return BOT_USER_AGENTS[Math.floor(Math.random() * BOT_USER_AGENTS.length)];
+  } else {
+    return REAL_USER_AGENTS[Math.floor(Math.random() * REAL_USER_AGENTS.length)];
+  }
+}
+
 // Create a pool of 10 users, each with a random-length numeric ID
 // We'll also add an 'os' (operating system), and a 'deviceType' field
 const USERS = Array.from({ length: 10 }).map(() => ({
@@ -57,9 +95,6 @@ function pickEvent() {
 
 function randomIP() {
   return faker.internet.ip();
-}
-function randomUserAgent() {
-  return faker.internet.userAgent();
 }
 function randomCountryCode() {
   return faker.address.countryCode();
@@ -151,7 +186,7 @@ class ScenarioGenerator {
       deviceType: user.deviceType,
       operatingSystem: user.operatingSystem,
       ip: randomIP(),
-      userAgent: randomUserAgent(),
+      userAgent: pickUserAgent(), // <--- Use our stable UA function here
       geolocation: {
         countryCode: randomCountryCode(),
         ...randomGeo(),
@@ -179,7 +214,7 @@ class ScenarioGenerator {
       productName: product.name,
       productCategory: product.category,
       ip: randomIP(),
-      userAgent: randomUserAgent(),
+      userAgent: pickUserAgent(), // <--- stable UA
       geolocation: {
         countryCode: randomCountryCode(),
         ...randomGeo(),
@@ -219,7 +254,8 @@ class ScenarioGenerator {
       cartContents: user.cart.map((p) => p.productId),
       addToCartPath: '/api/cart/add',
       deviceType: user.deviceType,
-      operatingSystem: user.operatingSystem
+      operatingSystem: user.operatingSystem,
+      userAgent: pickUserAgent(), // <--- stable UA
     };
 
     this.logger.info(log);
@@ -243,7 +279,8 @@ class ScenarioGenerator {
       })),
       checkoutPath: '/api/checkout',
       deviceType: user.deviceType,
-      operatingSystem: user.operatingSystem
+      operatingSystem: user.operatingSystem,
+      userAgent: pickUserAgent(), // <--- stable UA
     };
 
     this.logger.info(log);
@@ -278,7 +315,8 @@ class ScenarioGenerator {
         paymentLink,
         paymentPath: '/api/payment',
         deviceType: user.deviceType,
-        operatingSystem: user.operatingSystem
+        operatingSystem: user.operatingSystem,
+        userAgent: pickUserAgent(), // <--- stable UA
       };
       this.logger.error(log);
     } else {
@@ -295,7 +333,8 @@ class ScenarioGenerator {
         paymentLink,
         paymentPath: '/api/payment',
         deviceType: user.deviceType,
-        operatingSystem: user.operatingSystem
+        operatingSystem: user.operatingSystem,
+        userAgent: pickUserAgent(), // <--- stable UA
       };
       this.logger.info(log);
 
@@ -328,7 +367,8 @@ class ScenarioGenerator {
         ...randomGeo(),
       },
       deviceType: user.deviceType,
-      operatingSystem: user.operatingSystem
+      operatingSystem: user.operatingSystem,
+      userAgent: pickUserAgent(), // <--- stable UA
     };
     this.logger.info(log);
   }
