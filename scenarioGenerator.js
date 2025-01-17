@@ -115,7 +115,7 @@ class ScenarioGenerator {
     this.logger = createLogger();
     this.io = io;
     this.generating = false;
-    this.delayMs = 200; // 200ms between logs
+    this.delayMs = 10; 
   }
 
   start() {
