@@ -1,40 +1,39 @@
-// logtail.config.js
-const { createLogger, format } = require('winston');
+const winston = require('winston');
 const { Logtail } = require('@logtail/node');
 const { LogtailTransport } = require('@logtail/winston');
 
 function createLoggerInstance() {
-  const logtail = new Logtail(process.env.LOGTAIL_SOURCE_TOKEN);
+  const oldEndpoint = process.env.LOGTAIL_OLD_ENDPOINT
+  const newEndpoint = process.env.LOGTAIL_NEW_ENDPOINT
 
-  // 1) Create a custom format that renames `timestamp` to `dt`.
-  const renameTimestampToDt = format((info) => {
-    // Winston’s built-in timestamp format adds `info.timestamp`.
+  const logtailOld = new Logtail(process.env.LOGTAIL_SOURCE_TOKEN, {
+    endpoint: oldEndpoint
+  });
+
+  const logtailNew = new Logtail(process.env.OTHER_LOGTAIL_SOURCE_TOKEN, {
+    endpoint: newEndpoint
+  });
+
+  const renameTimestampToDt = winston.format((info) => {
     if (info.timestamp) {
-      info.dt = info.timestamp;   // rename field
-      delete info.timestamp;      // remove the old timestamp
+      info.dt = info.timestamp;
+      delete info.timestamp;
     }
     return info;
   });
 
-  // 2) Combine the usual Winston formats, plus our rename step
-  const logger = createLogger({
+  const logger = winston.createLogger({
     level: 'silly',
-    format: format.combine(
-      // This adds `info.timestamp` to each log
-      format.timestamp(),
-      // Rename `timestamp` to `dt`
+    format: winston.format.combine(
+      winston.format.timestamp(),
       renameTimestampToDt(),
-      // Include error stacks
-      format.errors({ stack: true }),
-      // Put extra keys (userId, sessionId, etc.) in `metadata`
-      format.metadata({
-        fillExcept: ['message', 'level', 'dt', 'label', 'stack']
-      }),
-      // Output final logs as JSON
-      format.json()
+      winston.format.errors({ stack: true }),
+      winston.format.metadata({ fillExcept: ['message', 'level', 'dt', 'label', 'stack'] }),
+      winston.format.json()
     ),
     transports: [
-      new LogtailTransport(logtail),
+      new LogtailTransport(logtailOld),
+      new LogtailTransport(logtailNew)
     ],
   });
 
