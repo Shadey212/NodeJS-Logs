@@ -21,6 +21,7 @@
     "node": "18.x"
   },
   "dependencies": {
+    "@faker-js/faker": "^9.6.0",
     "@logtail/node": "^0.4.21",
     "@logtail/winston": "^0.5.2",
     "dotenv": "^16.0.3",
