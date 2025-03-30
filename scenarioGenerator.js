@@ -1,5 +1,5 @@
 // scenarioGenerator.js
-const faker = require('faker');
+const { faker } = require('@faker-js/faker');
 const { createLogger } = require('./logtail.config');
 
 /**
@@ -7,12 +7,7 @@ const { createLogger } = require('./logtail.config');
  * E.g. "3", "42", "999999"
  */
 function generateNumericUserId() {
-  const length = faker.datatype.number({ min: 1, max: 6 });
-  let id = '';
-  for (let i = 0; i < length; i++) {
-    id += faker.datatype.number({ min: 0, max: 9 }).toString();
-  }
-  return id;
+  return faker.string.numeric({ length: { min: 1, max: 6 } });
 }
 
 /**
@@ -56,17 +51,17 @@ function pickUserAgent() {
 // Create a pool of 10 users, each with a random-length numeric ID
 const USERS = Array.from({ length: 10 }).map(() => ({
   userId: generateNumericUserId(),
-  username: faker.internet.userName(),
+  username: faker.internet.username(),
   email: faker.internet.email(),
   sessionId: null,
   cart: [],
-  deviceType: faker.random.arrayElement(['desktop', 'mobile', 'tablet']),
-  operatingSystem: faker.random.arrayElement(['Windows 10', 'macOS', 'iOS', 'Android', 'Linux']),
+  deviceType: faker.helpers.arrayElement(['desktop', 'mobile', 'tablet']),
+  operatingSystem: faker.helpers.arrayElement(['Windows 10', 'macOS', 'iOS', 'Android', 'Linux']),
 }));
 
 // We’ll keep 6 products, but add a random category to each for more detail
 const PRODUCTS = Array.from({ length: 6 }).map(() => ({
-  productId: faker.datatype.uuid(),
+  productId: faker.string.uuid(),
   name: faker.commerce.productName(),
   category: faker.commerce.department(),
   price: faker.commerce.price(),
@@ -74,12 +69,12 @@ const PRODUCTS = Array.from({ length: 6 }).map(() => ({
 
 // Weighted events
 const EVENT_WEIGHTS = [
-  { event: 'LOGIN',       weight: 0.2 },
-  { event: 'BROWSE',      weight: 0.3 },
+  { event: 'LOGIN', weight: 0.2 },
+  { event: 'BROWSE', weight: 0.3 },
   { event: 'ADD_TO_CART', weight: 0.25 },
-  { event: 'CHECKOUT',    weight: 0.15 },
-  { event: 'PAYMENT',     weight: 0.07 },
-  { event: 'SHIPPING',    weight: 0.03 },
+  { event: 'CHECKOUT', weight: 0.15 },
+  { event: 'PAYMENT', weight: 0.07 },
+  { event: 'SHIPPING', weight: 0.03 },
 ];
 
 function pickEvent() {
@@ -96,12 +91,12 @@ function randomIP() {
   return faker.internet.ip();
 }
 function randomCountryCode() {
-  return faker.address.countryCode();
+  return faker.location.countryCode();
 }
 function randomGeo() {
   return {
-    latitude: faker.address.latitude(),
-    longitude: faker.address.longitude(),
+    latitude: faker.location.latitude(),
+    longitude: faker.location.longitude(),
   };
 }
 
@@ -136,20 +131,20 @@ class ScenarioGenerator {
       try {
         // Main scenario event
         const eventType = pickEvent();
-        const user = faker.random.arrayElement(USERS);
+        const user = faker.helpers.arrayElement(USERS);
         await this.generateEvent(eventType, user);
 
         // Possibly generate an "extra" log with debug/warn/verbose, etc.
         this.maybeGenerateAdditionalLog();
       } catch (err) {
         this.logger.error(`\u001B[31m[GENERATOR_ERROR]\u001B[0m ${err.message}`, {
-          stack: err.stack
+          stack: err.stack,
         });
         this.generating = false;
       }
 
       // Random delay between 10 and 65 ms
-      const randomDelay = faker.datatype.number({ min: 10, max: 35 });
+      const randomDelay = faker.number.int({ min: 10, max: 35 });
       await new Promise((r) => setTimeout(r, randomDelay));
     }
   }
@@ -183,7 +178,7 @@ class ScenarioGenerator {
   // --------
 
   generateLoginLog(user) {
-    user.sessionId = faker.datatype.uuid();
+    user.sessionId = faker.string.uuid();
 
     const message = `User \u001B[1;32m${user.userId}\u001B[0m logged in (device: ${user.deviceType}).`;
 
@@ -211,7 +206,7 @@ class ScenarioGenerator {
   generateBrowseLog(user) {
     if (!user.sessionId) return;
 
-    const product = faker.random.arrayElement(PRODUCTS);
+    const product = faker.helpers.arrayElement(PRODUCTS);
     const message = `User \u001B[1;32m${user.userId}\u001B[0m browsed \u001B[33m${product.name}\u001B[0m in category [${product.category}].`;
 
     const log = {
@@ -230,7 +225,7 @@ class ScenarioGenerator {
       },
       browsePath: '/api/products',
       deviceType: user.deviceType,
-      operatingSystem: user.operatingSystem
+      operatingSystem: user.operatingSystem,
     };
 
     this.logger.info(log);
@@ -239,8 +234,8 @@ class ScenarioGenerator {
   generateAddToCartLog(user) {
     if (!user.sessionId) return;
 
-    const product = faker.random.arrayElement(PRODUCTS);
-    const quantity = faker.datatype.number({ min: 1, max: 5 });
+    const product = faker.helpers.arrayElement(PRODUCTS);
+    const quantity = faker.number.int({ min: 1, max: 5 });
     for (let i = 0; i < quantity; i++) {
       user.cart.push(product);
     }
@@ -281,7 +276,7 @@ class ScenarioGenerator {
         productId: p.productId,
         name: p.name,
         category: p.category,
-        price: p.price
+        price: p.price,
       })),
       checkoutPath: '/api/checkout',
       deviceType: user.deviceType,
@@ -296,11 +291,9 @@ class ScenarioGenerator {
     if (!user.sessionId || user.cart.length === 0) return;
 
     const isFailure = Math.random() < 0.05; // 5% chance to fail
-    const totalAmount = user.cart
-      .reduce((acc, p) => acc + parseFloat(p.price), 0)
-      .toFixed(2);
+    const totalAmount = user.cart.reduce((acc, p) => acc + parseFloat(p.price), 0).toFixed(2);
 
-    const paymentMethod = faker.random.arrayElement(PAYMENT_METHODS);
+    const paymentMethod = faker.helpers.arrayElement(PAYMENT_METHODS);
     const paymentLink = `https://example.com/pay?session=${user.sessionId}`;
 
     if (isFailure) {
@@ -351,8 +344,8 @@ class ScenarioGenerator {
   generateShippingLog(user) {
     if (!user.sessionId) return;
 
-    const shippingProvider = faker.random.arrayElement(SHIPPING_PROVIDERS);
-    const deliveryEstimate = faker.date.soon(7).toISOString().split('T')[0];
+    const shippingProvider = faker.helpers.arrayElement(SHIPPING_PROVIDERS);
+    const deliveryEstimate = faker.date.soon({ days: 7 }).toISOString().split('T')[0];
 
     const message = `Order shipped for user \u001B[1;32m${user.userId}\u001B[0m via ${shippingProvider}.`;
     const log = {
@@ -360,10 +353,10 @@ class ScenarioGenerator {
       message,
       userId: user.userId,
       sessionId: user.sessionId,
-      trackingCode: faker.datatype.uuid(),
+      trackingCode: faker.string.uuid(),
       shippingProvider,
       deliveryEstimate,
-      shippingAddress: faker.address.streetAddress(),
+      shippingAddress: faker.location.streetAddress(),
       shippingPath: '/api/shipping',
       geolocation: {
         countryCode: randomCountryCode(),
@@ -382,12 +375,12 @@ class ScenarioGenerator {
   maybeGenerateAdditionalLog() {
     // 5% chance to log something at debug/warn/verbose/silly
     if (Math.random() < EXTRA_LOG_CHANCE) {
-      const chosenLevel = faker.random.arrayElement(ADDITIONAL_LOG_LEVELS);
+      const chosenLevel = faker.helpers.arrayElement(ADDITIONAL_LOG_LEVELS);
       const randomMsg = faker.lorem.sentence();
       const extraFields = {
         event: `RANDOM_${chosenLevel.toUpperCase()}`,
         userAgent: pickUserAgent(),
-        debugKey: faker.random.alphaNumeric(8),
+        debugKey: faker.string.alphanumeric(8),
       };
 
       switch (chosenLevel) {
